@@ -1,6 +1,10 @@
 import sys,csv,os
 from PyQt5 import QtCore, QtGui, QtWidgets
 from gui import Ui_MainWindow
+import glob
+import os.path
+
+
 roi_list = []
 if os.path.exists("roi.csv"):
 	with open('roi.csv','r')as f:
@@ -11,6 +15,7 @@ if os.path.exists("roi.csv"):
 def clear_roi():
 	del roi_list[:]	
 main_var = ''
+filename = ''
 class MyWidget(QtWidgets.QWidget):
 
 	def __init__(self):
@@ -30,7 +35,9 @@ class MyWidget(QtWidgets.QWidget):
 		self.end = QtCore.QPoint()
 		self.show()
 		self.paintEvent(self)
+
 		global roi_list
+		global filename
 	    
 
 	def load_prev_box(self,qp):
@@ -42,7 +49,8 @@ class MyWidget(QtWidgets.QWidget):
 		self.rect_state=0
 		self.rect_list = []
 		self.rect_list1 = []
-		filename = "roi.csv"
+		global filename
+
 		# opening the file with w+ mode truncates the file
 		os.remove(filename)
 		f = open(filename, "w+")
@@ -94,29 +102,85 @@ class MyWidget(QtWidgets.QWidget):
 		self.rect_state =1
 		roi_list_temp =list(map(str,str(self.rect_list[-1])[20:-1].split(",")))+list(map(str,str(self.rect_list1[-1])[20:-1].split(",")))
 		roi_list.append(roi_list_temp)
-		with open('roi.csv', 'a+') as writeFile:
+		global filename
+		print(filename)
+		with open('{}'.format(filename), 'a+') as writeFile:
 			writer = csv.writer(writeFile)
 			writer.writerows([roi_list_temp])
 			self.update()
 
 class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self, parent=None):
-        QtWidgets.QMainWindow.__init__(self, parent)
-        self.u = 0
-        self.v = 0
-        global roi_list
-        #print(roi_list)
-        self.setupUi(self)
-        print("*"*40,self.image_view.height(),self.image_view.width())
-        self.gridLayout_4.removeWidget(self.image_view)
-        self.image_view.close()
-        self.image_view = MyWidget()
-        self.image_view.setStyleSheet("border: 10px solid black;")
-        self.gridLayout_4.addWidget(self.image_view,0,1,1,1)
-        pix = QtGui.QPixmap(str("/home/ratan/Downloads/Screenshot_20191208_210211.png"))
-        global main_var 
-        main_var = pix
-        self.image_view.setMinimumSize(200,200)
+	def __init__(self, parent=None):
+		QtWidgets.QMainWindow.__init__(self, parent)
+		self.u = 0
+		self.v = 0
+		global roi_list
+		#print(roi_list)
+		self.setupUi(self)
+		print("*"*40,self.image_view.height(),self.image_view.width())
+		self.gridLayout_4.removeWidget(self.image_view)
+		self.image_view.close()
+		self.image_view = MyWidget()
+		self.image_view.setStyleSheet("border: 10px solid black;")
+		self.gridLayout_4.addWidget(self.image_view,1,1,1,1)
+
+		self.image_view.setMinimumSize(200,200)
+		self.img_browse.clicked.connect(self.getImagefolder)
+		self.annotation_browse.clicked.connect(self.getAnnotationfolder)
+		self.prev_btn.clicked.connect(self.prevImage)
+		self.next_btn.clicked.connect(self.nextImage)
+		self.counter =0
+		self.image_list = None
+		self.annotation_list  =None
+
+
+	def prevImage(self):
+		if self.counter >=0:
+			if self.counter !=0:
+				self.counter -=1
+			pix = QtGui.QPixmap(str(self.image_list[self.counter]))
+			global main_var 
+			main_var = pix
+			self.image_view.update()
+			self.label_index.setText("{}/{}".format(self.counter,len(self.image_list)-1))
+			
+
+	def nextImage(self):
+		if self.counter < len(self.image_list)-1:
+			self.counter +=1
+			pix = QtGui.QPixmap(str(self.image_list[self.counter]))
+			global main_var 
+			main_var = pix
+			self.image_view.update()
+			self.label_index.setText("{}/{}".format(self.counter,len(self.image_list)-1))
+
+
+	def getImagefolder(self):
+		Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory')
+		self.label_4.setText(Dname)
+		self.image_list = [item for i in [glob.glob('{}/*.{}'.format(Dname,ext)) for ext in ["jpg","gif","png","tga"]] for item in i]
+		self.counter =0
+		pix = QtGui.QPixmap(str(self.image_list[self.counter]))
+		global main_var 
+		main_var = pix
+		self.image_view.update()
+		self.label_index.setText("{}/{}".format(self.counter,len(self.image_list)-1))
+		
+
+	def getAnnotationfolder(self):
+		print("browsing annotation")
+		Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory',"")
+		self.label_5.setText(Dname)
+		self.annotation_list = glob.glob('{}/*.txt'.format(Dname))
+		annotationName = Dname+"/"+str(self.image_list[self.counter].split(".")[-2].split("/")[-1])+".txt"
+		global filename
+		if os.path.isfile(annotationName):
+			print ("File exist")
+			filename = annotationName
+		else:
+			print ("File not exist")
+			filename = annotationName
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
