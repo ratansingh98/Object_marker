@@ -78,7 +78,6 @@ class MyWidget(QtWidgets.QWidget):
 			#qp.setPen(Qt.NoPen);
 			qp.setBrush(br)
 			for brc in range(0,len(self.rect_list) ):
-				
 				qp.drawRect(QtCore.QRect( self.rect_list[brc], self.rect_list1[brc] ))
 			if self.ret:
 				self.load_prev_box(qp)
@@ -107,14 +106,14 @@ class MyWidget(QtWidgets.QWidget):
 		with open('{}'.format(filename), 'a+') as writeFile:
 			writer = csv.writer(writeFile)
 			writer.writerows([roi_list_temp])
-			self.update()
+		self.update()
 
 class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 	def __init__(self, parent=None):
 		QtWidgets.QMainWindow.__init__(self, parent)
 		self.u = 0
 		self.v = 0
-		global roi_list
+		
 		#print(roi_list)
 		self.setupUi(self)
 		print("*"*40,self.image_view.height(),self.image_view.width())
@@ -132,14 +131,18 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		self.counter =0
 		self.image_list = None
 		self.annotation_list  =None
+		self.Dname = None
 
 
 	def prevImage(self):
 		if self.counter >=0:
 			if self.counter !=0:
 				self.counter -=1
-			pix = QtGui.QPixmap(str(self.image_list[self.counter]))
+			currIamge=self.image_list[self.counter]
+			pix = QtGui.QPixmap(str(currIamge))
 			global main_var 
+			annotationName = self.Dname+"/"+str(currIamge.split(".")[-2].split("/")[-1])+".txt"
+			self.load_Annotation(annotationName)
 			main_var = pix
 			self.image_view.update()
 			self.label_index.setText("{}/{}".format(self.counter,len(self.image_list)-1))
@@ -148,17 +151,20 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 	def nextImage(self):
 		if self.counter < len(self.image_list)-1:
 			self.counter +=1
-			pix = QtGui.QPixmap(str(self.image_list[self.counter]))
+			currIamge=self.image_list[self.counter]
+			pix = QtGui.QPixmap(str(currIamge))
 			global main_var 
+			annotationName = self.Dname+"/"+str(currIamge.split(".")[-2].split("/")[-1])+".txt"
+			self.load_Annotation(annotationName)
 			main_var = pix
 			self.image_view.update()
 			self.label_index.setText("{}/{}".format(self.counter,len(self.image_list)-1))
 
 
 	def getImagefolder(self):
-		Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory')
-		self.label_4.setText(Dname)
-		self.image_list = [item for i in [glob.glob('{}/*.{}'.format(Dname,ext)) for ext in ["jpg","gif","png","tga"]] for item in i]
+		self.Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory')
+		self.label_4.setText(self.Dname)
+		self.image_list = [item for i in [glob.glob('{}/*.{}'.format(self.Dname,ext)) for ext in ["jpg","gif","png","tga"]] for item in i]
 		self.counter =0
 		pix = QtGui.QPixmap(str(self.image_list[self.counter]))
 		global main_var 
@@ -169,17 +175,38 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 
 	def getAnnotationfolder(self):
 		print("browsing annotation")
-		Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory',"")
-		self.label_5.setText(Dname)
-		self.annotation_list = glob.glob('{}/*.txt'.format(Dname))
-		annotationName = Dname+"/"+str(self.image_list[self.counter].split(".")[-2].split("/")[-1])+".txt"
+		self.Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory',"")
+		self.label_5.setText(self.Dname)
+		self.annotation_list = glob.glob('{}/*.txt'.format(self.Dname))
+		annotationName = self.Dname+"/"+str(self.image_list[self.counter].split(".")[-2].split("/")[-1])+".txt"
+		self.load_Annotation(annotationName)
+
+
+	def load_Annotation(self,annotationName):
 		global filename
+		global roi_list
+		load_roi = []
+		roi_list =[]
+		self.image_view.rect_list =[]
+		self.image_view.rect_list1 =[]
+
 		if os.path.isfile(annotationName):
 			print ("File exist")
 			filename = annotationName
+			with open(filename) as fp:
+				line = fp.readline()
+				cnt = 1
+				while line:
+					load_roi.append([i for  i in map(float,line.strip().split(","))])
+					line = fp.readline()
+			roi_list = load_roi
+			self.image_view.update()
 		else:
 			print ("File not exist")
 			filename = annotationName
+			self.image_view.update()
+			
+			
 
 
 if __name__ == "__main__":
