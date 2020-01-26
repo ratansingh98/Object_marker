@@ -113,7 +113,7 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		QtWidgets.QMainWindow.__init__(self, parent)
 		self.u = 0
 		self.v = 0
-		
+		self.res= []
 		#print(roi_list)
 		self.setupUi(self)
 		print("*"*40,self.image_view.height(),self.image_view.width())
@@ -128,6 +128,8 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		self.annotation_browse.clicked.connect(self.getAnnotationfolder)
 		self.prev_btn.clicked.connect(self.prevImage)
 		self.next_btn.clicked.connect(self.nextImage)
+		self.names_browse.clicked.connect(self.browseName)
+		
 		self.counter =0
 		self.image_list = None
 		self.annotation_list  =None
@@ -195,7 +197,6 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 			filename = annotationName
 			with open(filename) as fp:
 				line = fp.readline()
-				cnt = 1
 				while line:
 					load_roi.append([i for  i in map(float,line.strip().split(","))])
 					line = fp.readline()
@@ -205,7 +206,32 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 			print ("File not exist")
 			filename = annotationName
 			self.image_view.update()
-			
+
+	def browseName(self):		
+		filename = QtWidgets.QFileDialog.getOpenFileNames(self, "Select File", "", "*.names")[0][0]
+		with open(filename) as fp:
+			line = fp.readline()
+			while line:
+				self.res.append(line.strip())
+				line = fp.readline()
+			self.names_table.setRowCount(0)
+			self.names_table.setColumnCount(1)
+			for row_number, row_data in enumerate(self.res):
+				self.names_table.insertRow(row_number)
+				item = QtWidgets.QTableWidgetItem(str(row_data))
+				self.names_table.setItem(row_number,0, item)
+				self.names_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+				self.names_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+				header = self.names_table.horizontalHeader()        
+				stylesheet = "::section{Background-color:rgb(43,59,88);color:rgb(255,255,255);font-size:18px;font-weight: bold   }"
+				header.setStyleSheet(stylesheet)
+				header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+				self.products_header= ['Labels']
+				self.names_table.setHorizontalHeaderLabels(self.products_header)
+		#        self.names_table.hideColumn(0)
+				self.names_table.verticalHeader().setDefaultSectionSize(50)
+				self.names_table.verticalHeader().hide()
+				self.names_table.setStyleSheet('font-size:18px')
 			
 
 
