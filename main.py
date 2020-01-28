@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from gui import Ui_MainWindow
 import glob
 import os.path
-
+import cv2
 
 roi_list = []
 if os.path.exists("roi.csv"):
@@ -16,6 +16,8 @@ def clear_roi():
 	del roi_list[:]	
 main_var = ''
 filename = ''
+label_data =0
+label_list = None
 class MyWidget(QtWidgets.QWidget):
 
 	def __init__(self):
@@ -41,8 +43,16 @@ class MyWidget(QtWidgets.QWidget):
 	    
 
 	def load_prev_box(self,qp):
+		global label_list
 		for brc in roi_list:
 			qp.drawRect(QtCore.QRect(QtCore.QPoint(int(brc[0]),int(brc[1])),QtCore.QPoint(int(brc[2]), int(brc[3]))))
+			qp.setPen(QtGui.QPen(QtCore.Qt.red))
+			try:
+				qp.drawText(QtCore.QPoint(int(brc[0]),int(brc[1])), label_list[brc[4]])
+			except:
+				QtWidgets.QMessageBox.about(self, "Alert", "Please load names file")
+
+		qp.end()
 		
 
 	def clear_boxes(self):
@@ -86,6 +96,7 @@ class MyWidget(QtWidgets.QWidget):
 		#        br1 = QtGui.QBrush(QtGui.QColor(100, 10, 10, 40))
 		#        qp.setBrush(br1)
 		#        qp.drawRect(QtCore.QRect(self.begin-QtCore.QPoint(10, 10), self.end-QtCore.QPoint(10, 10)))
+		qp.end()
 
 	def mousePressEvent(self, event):
 		self.begin = event.pos()
@@ -95,11 +106,14 @@ class MyWidget(QtWidgets.QWidget):
 		pass
 
 	def mouseReleaseEvent(self, event):
+		global label_data
 		self.end = event.pos()
 		self.rect_list.append(self.begin)
 		self.rect_list1.append(self.end)
 		self.rect_state =1
 		roi_list_temp =list(map(str,str(self.rect_list[-1])[20:-1].split(",")))+list(map(str,str(self.rect_list1[-1])[20:-1].split(",")))
+		# Add label to box
+		roi_list_temp.append(label_data)
 		roi_list.append(roi_list_temp)
 		global filename
 		print(filename)
@@ -129,12 +143,17 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		self.prev_btn.clicked.connect(self.prevImage)
 		self.next_btn.clicked.connect(self.nextImage)
 		self.names_browse.clicked.connect(self.browseName)
-		
+		self.names_table.cellClicked.connect(self.selectedLabel)
 		self.counter =0
 		self.image_list = None
 		self.annotation_list  =None
 		self.Dname = None
+		self.label_data = []
 
+	def selectedLabel(self,row, column):
+		global label_data,label_list
+		label_data = row
+		label_list = self.label_data
 
 	def prevImage(self):
 		if self.counter >=0:
@@ -176,7 +195,6 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		
 
 	def getAnnotationfolder(self):
-		print("browsing annotation")
 		self.Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory',"")
 		self.label_5.setText(self.Dname)
 		self.annotation_list = glob.glob('{}/*.txt'.format(self.Dname))
@@ -193,22 +211,21 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		self.image_view.rect_list1 =[]
 
 		if os.path.isfile(annotationName):
-			print ("File exist")
 			filename = annotationName
 			with open(filename) as fp:
 				line = fp.readline()
 				while line:
-					load_roi.append([i for  i in map(float,line.strip().split(","))])
+					load_roi.append([i for  i in map(int,line.strip().split(","))])
 					line = fp.readline()
 			roi_list = load_roi
 			self.image_view.update()
 		else:
-			print ("File not exist")
 			filename = annotationName
 			self.image_view.update()
 
 	def browseName(self):		
 		filename = QtWidgets.QFileDialog.getOpenFileNames(self, "Select File", "", "*.names")[0][0]
+		self.label_data = []
 		with open(filename) as fp:
 			line = fp.readline()
 			while line:
@@ -219,6 +236,7 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 			for row_number, row_data in enumerate(self.res):
 				self.names_table.insertRow(row_number)
 				item = QtWidgets.QTableWidgetItem(str(row_data))
+				self.label_data.append(str(row_data))
 				self.names_table.setItem(row_number,0, item)
 				self.names_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 				self.names_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -232,7 +250,10 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 				self.names_table.verticalHeader().setDefaultSectionSize(50)
 				self.names_table.verticalHeader().hide()
 				self.names_table.setStyleSheet('font-size:18px')
-			
+		global label_data,label_list
+		label_data = 0
+		label_list = self.label_data
+
 
 
 if __name__ == "__main__":
