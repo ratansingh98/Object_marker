@@ -196,6 +196,10 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 
 	def getAnnotationfolder(self):
 		self.Dname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory',"")
+		if len(self.label_data) == 0:
+			QtWidgets.QMessageBox.about(self, "Alert", "Please load names file")
+		if self.Dname == "":
+			return
 		self.label_5.setText(self.Dname)
 		self.annotation_list = glob.glob('{}/*.txt'.format(self.Dname))
 		annotationName = self.Dname+"/"+str(self.image_list[self.counter].split(".")[-2].split("/")[-1])+".txt"
@@ -209,7 +213,6 @@ class MainWindow_exec(QtWidgets.QMainWindow, Ui_MainWindow):
 		roi_list =[]
 		self.image_view.rect_list =[]
 		self.image_view.rect_list1 =[]
-
 		if os.path.isfile(annotationName):
 			filename = annotationName
 			with open(filename) as fp:
