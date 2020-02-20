@@ -1,4 +1,4 @@
-<h1 align="center">Yolo Marker</h1>
+<h1 align="center">Object Marker</h1>
 
 Simple marker for marking bounded boxes of objects for training and cropping using parameters.
 It is made using Pyqt5, that makes is easier to understand and manage. Feel free to contibute. :)
